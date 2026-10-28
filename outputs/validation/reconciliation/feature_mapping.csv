@@ -1,0 +1,7 @@
+feature,sas_term
+RevolvingUtilizationOfUnsecuredLines,w001
+NumberOfTime30-59DaysPastDueNotWorse,w002
+NumberOfTimes90DaysLate,w003
+MonthlyIncome,w004
+NumberOfTime60-89DaysPastDueNotWorse,w005
+age,w006

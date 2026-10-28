@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")  # non-interactive backend for server environments
 
-from src.data_utils import load_data, preprocess, split_data, data_quality_report, FEATURE_COLS
+from src.data_utils import load_data, FrozenPreprocessor, split_data, data_quality_report, FEATURE_COLS
 from src.woe_encoder import WOEBinEncoder
 from src.scorecard_model import (
     LogisticScorecard,
@@ -58,7 +58,8 @@ def main(args):
     # ─── 2. Preprocessing ──────────────────────────────────────────────────
     logger.info("\nSTEP 2: Preprocessing")
     logger.info("=" * 55)
-    df_clean = preprocess(df, cap_outliers=True, impute_missing=True)
+    # Split raw observations before learning any imputation statistics.
+    df_clean = df
 
     # ─── 3. Train / Val / OOT Split ────────────────────────────────────────
     logger.info("\nSTEP 3: Data Split")
@@ -69,6 +70,11 @@ def main(args):
         oot_size=config["split"]["oot_size"],
         random_state=config["split"]["random_state"],
     )
+    preprocessor = FrozenPreprocessor().fit(X_train)
+    X_train = preprocessor.transform(X_train)
+    X_val = preprocessor.transform(X_val)
+    X_oot = preprocessor.transform(X_oot)
+    save_model(preprocessor, "outputs/models", "preprocessor")
 
     # ─── 4. WOE Encoding & IV Selection ────────────────────────────────────
     logger.info("\nSTEP 4: WOE Binning & Feature Selection")
@@ -115,11 +121,11 @@ def main(args):
 
     # OOT evaluation
     from src.evaluation import gini_coefficient, ks_statistic, psi
-    logger.info("\n  Out-of-Time (OOT) Performance:")
-    logger.info(f"    Gini (OOT): {gini_coefficient(y_oot.values, y_pred_oot):.4f}")
+    logger.info("\n  Simulated OOT proxy (random holdout; no temporal validation):")
+    logger.info(f"    Gini (simulated OOT proxy): {gini_coefficient(y_oot.values, y_pred_oot):.4f}")
     ks_oot, _ = ks_statistic(y_oot.values, y_pred_oot)
-    logger.info(f"    KS   (OOT): {ks_oot:.4f}")
-    logger.info(f"    PSI (train→OOT): {psi(y_pred_train, y_pred_oot):.4f}")
+    logger.info(f"    KS   (simulated OOT proxy): {ks_oot:.4f}")
+    logger.info(f"    PSI (train→simulated OOT proxy): {psi(y_pred_train, y_pred_oot):.4f}")
 
     # Decile table
     dec = decile_table(y_val.values, y_pred_val)
@@ -133,6 +139,17 @@ def main(args):
     logger.info("=" * 55)
     challenger = XGBoostChallenger(params=config["xgboost"])
     challenger.fit(X_train, y_train, X_val, y_val)
+
+    from src.validation import metrics
+    validation_metrics = []
+    for model_name, fitted in [("logistic_champion", champion), ("xgboost_challenger", challenger)]:
+        for split_name, features, labels in [
+            ("train", X_train, y_train), ("validation", X_val, y_val),
+            ("simulated_oot_proxy", X_oot, y_oot),
+        ]:
+            validation_metrics.append(dict(model=model_name, split=split_name,
+                **metrics(labels, fitted.predict_proba(features))))
+    pd.DataFrame(validation_metrics).to_csv(f"{args.output}/metrics_all_splits.csv", index=False)
 
     plot_model_report(
         y_train.values, challenger.predict_proba(X_train),

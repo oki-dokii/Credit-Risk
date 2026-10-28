@@ -20,8 +20,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
-import xgboost as xgb
-import shap
 import logging
 
 from src.woe_encoder import WOEBinEncoder
@@ -41,7 +39,7 @@ class ScorecardScaler:
     Formula:
       Factor = PDO / ln(2)
       Offset = Base_Score - Factor * ln(Base_Odds)
-      Score  = Offset + Factor * ln(p/(1-p))
+      Score  = Offset + Factor * ln((1-p)/p), where p = P(default)
 
     Standard bank parameters:
       PDO = 20 (score drops 20 points when odds double)
@@ -135,7 +133,7 @@ class LogisticScorecard:
 
         # Distribute intercept equally across variables (standard practice)
         intercept_per_var = (
-            self.scorecard_scaler.offset + self.scorecard_scaler.factor * intercept
+            self.scorecard_scaler.offset - self.scorecard_scaler.factor * intercept
         ) / n_vars
 
         for feature in self.selected_features_:
@@ -176,6 +174,7 @@ class XGBoostChallenger:
     """
 
     def __init__(self, params: Optional[Dict] = None):
+        import xgboost as xgb
         self.params = params or {
             "n_estimators": 300,
             "max_depth": 4,
@@ -207,8 +206,6 @@ class XGBoostChallenger:
         )
 
         # Build SHAP explainer
-        logger.info("Building SHAP explainer...")
-        self.explainer_ = shap.TreeExplainer(self.model)
         self.is_fitted_ = True
         return self
 
@@ -218,6 +215,9 @@ class XGBoostChallenger:
     def shap_summary(self, X: pd.DataFrame, max_display: int = 15, save_path: Optional[str] = None):
         """Generate SHAP beeswarm summary plot."""
         import matplotlib.pyplot as plt
+        import shap
+        if self.explainer_ is None:
+            self.explainer_ = shap.TreeExplainer(self.model)
         shap_values = self.explainer_.shap_values(X[self.feature_names_])
         plt.figure(figsize=(10, 7))
         shap.summary_plot(shap_values, X[self.feature_names_], max_display=max_display, show=False)

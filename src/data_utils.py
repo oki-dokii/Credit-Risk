@@ -30,6 +30,28 @@ FEATURE_COLS = [
 
 TARGET_COL = "SeriousDlqin2yrs"
 
+
+class FrozenPreprocessor:
+    """Learn medians on training rows only; reuse caps and medians at scoring."""
+
+    def fit(self, X):
+        capped = preprocess(X[FEATURE_COLS], impute_missing=False)
+        self.medians_ = capped.median()
+        if self.medians_.isna().any():
+            raise ValueError("Training features must each have at least one observed value")
+        return self
+
+    def transform(self, X):
+        if not hasattr(self, "medians_"):
+            raise RuntimeError("Fit preprocessing on training data first")
+        result = preprocess(X[FEATURE_COLS], impute_missing=False).fillna(self.medians_)
+        if not np.isfinite(result.to_numpy()).all():
+            raise ValueError("Preprocessed features must be finite")
+        return result
+
+    def fit_transform(self, X):
+        return self.fit(X).transform(X)
+
 # Business-driven caps to handle extreme outliers
 OUTLIER_CAPS = {
     "RevolvingUtilizationOfUnsecuredLines": (0, 1.5),
@@ -48,7 +70,13 @@ OUTLIER_CAPS = {
 def load_data(path: str = "data/raw/cs-training.csv") -> pd.DataFrame:
     """Load raw dataset with validation."""
     logger.info(f"Loading data from {path}")
-    df = pd.read_csv(path, index_col=0)
+    df = pd.read_csv(path)
+    missing = set(FEATURE_COLS + [TARGET_COL]) - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+    if not df[TARGET_COL].isin([0, 1]).all() or df[TARGET_COL].nunique() != 2:
+        raise ValueError("Target must contain both 0 and 1, without missing values")
+    df = df[FEATURE_COLS + [TARGET_COL]]
     logger.info(f"  Loaded {len(df):,} rows, {df.shape[1]} columns")
     logger.info(f"  Target rate: {df[TARGET_COL].mean():.2%}")
     return df
@@ -111,9 +139,11 @@ def split_data(
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame,
            pd.Series,  pd.Series,  pd.Series]:
     """
-    Three-way split: Train / Validation / Out-of-Time (OOT).
-    OOT simulates model performance on future data — key for MRM.
+    Stratified random train / validation / simulated OOT proxy split.
+    No observation dates are available: the proxy cannot test temporal stability.
     """
+    if val_size <= 0 or oot_size <= 0 or val_size + oot_size >= 1:
+        raise ValueError("Split fractions must be positive and sum to less than one")
     X = df[FEATURE_COLS]
     y = df[TARGET_COL]
 
@@ -130,6 +160,6 @@ def split_data(
 
     logger.info(f"  Train: {len(X_train):,} rows ({y_train.mean():.2%} bad rate)")
     logger.info(f"  Val:   {len(X_val):,} rows  ({y_val.mean():.2%} bad rate)")
-    logger.info(f"  OOT:   {len(X_oot):,} rows  ({y_oot.mean():.2%} bad rate)")
+    logger.info(f"  Simulated OOT proxy: {len(X_oot):,} rows ({y_oot.mean():.2%} bad rate)")
 
     return X_train, X_val, X_oot, y_train, y_val, y_oot

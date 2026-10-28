@@ -1,0 +1,26 @@
+{
+  "data_source": "SYNTHETIC DEMONSTRATION \u2014 NOT REAL CREDIT DATA",
+  "rows": 12000,
+  "seed": 42,
+  "split_config": {
+    "val_size": 0.2,
+    "oot_size": 0.2,
+    "random_state": 42
+  },
+  "models": [
+    "logistic_champion",
+    "xgboost_challenger"
+  ],
+  "python": "3.12.14",
+  "numpy": "2.5.4",
+  "pandas": "2.3.3",
+  "scikit_learn": "1.7.2",
+  "data_sha256": "0b885db90790ac34e8ad2ac227e52663bbaa561c1b5fd69b66b17eca3c484342",
+  "config_sha256": "8a43814b108c68cdc6172cf06aeaa5993084dcd6fe0cf75fd334e3edcd848851",
+  "sas_status": "PENDING_SAS_EXECUTION",
+  "demonstration_alerts": {
+    "psi_shift": true,
+    "gini_inversion": true
+  },
+  "temporal_validation": false
+}

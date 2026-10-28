@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 import joblib
 
-from src.data_utils import preprocess, FEATURE_COLS
+from src.data_utils import FEATURE_COLS
 from src.scorecard_model import load_model
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
@@ -22,7 +22,7 @@ def main(args):
     # Load models
     logger.info("Loading models...")
     champion   = load_model("outputs/models", "champion_logistic")
-    woe_encoder = load_model("outputs/models", "woe_encoder")
+    preprocessor = load_model("outputs/models", "preprocessor")
 
     # Load applicant data
     logger.info(f"Loading applicant data: {args.input}")
@@ -30,7 +30,7 @@ def main(args):
     logger.info(f"  {len(df):,} applicants to score")
 
     # Preprocess
-    df_clean = preprocess(df, cap_outliers=True, impute_missing=True)
+    df_clean = preprocessor.transform(df)
     X = df_clean[FEATURE_COLS]
 
     # Generate scores and probabilities

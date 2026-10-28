@@ -41,3 +41,24 @@ The imported results and model card have not been independently reproduced for t
 ## Attribution and licensing
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for baseline authorship and the licensing status recorded at import.
+
+## Validation and original extensions
+
+The new validation workflow includes independent metrics and calibration on all three splits,
+monitoring alarm simulations, decision stress tests, sign checks, a validation memo, and an
+executable Python–SAS reconciliation bridge.
+
+```bash
+python -m pip install -r requirements-validation.txt
+python validate.py
+python -m unittest discover -s tests -v
+```
+
+No real dataset or SAS runtime was supplied. The default run is explicitly synthetic.
+The 20% random holdout is a **simulated OOT proxy**, not a genuine future-vintage test;
+it cannot establish temporal stability. SAS reconciliation remains pending actual SAS execution.
+
+See [reproduction instructions](docs/validation.md), the
+[generated validation memo](outputs/validation/validation_memo.md), and
+[model card](model_card.md). The historical tables directly under outputs/ remain imported
+reference artifacts; outputs/validation/ contains the new demonstration results.

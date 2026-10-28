@@ -1,0 +1,7 @@
+feature,coefficient,woe_convention,negative_coefficient_review
+RevolvingUtilizationOfUnsecuredLines,1.059859104973221,log(event_distribution / non_event_distribution),False
+NumberOfTime30-59DaysPastDueNotWorse,1.0750468560497934,log(event_distribution / non_event_distribution),False
+NumberOfTimes90DaysLate,1.1069123018408766,log(event_distribution / non_event_distribution),False
+MonthlyIncome,1.0304902041168424,log(event_distribution / non_event_distribution),False
+NumberOfTime60-89DaysPastDueNotWorse,1.0430231293589727,log(event_distribution / non_event_distribution),False
+age,1.068156637612843,log(event_distribution / non_event_distribution),False

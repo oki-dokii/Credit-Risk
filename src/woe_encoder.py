@@ -165,9 +165,11 @@ class WOEBinEncoder:
     def _create_initial_bins(self, series: pd.Series) -> np.ndarray:
         """Create equal-frequency bins for continuous features."""
         clean = series.dropna()
+        if clean.empty:
+            return np.array([-np.inf, np.inf])
         if clean.nunique() <= self.n_bins:
-            # Categorical-like: use unique values as bins
-            return np.sort(clean.unique())
+            values = np.sort(clean.unique()).astype(float)
+            return np.r_[-np.inf, values[:-1] + np.diff(values) / 2, np.inf]
         quantiles = np.linspace(0, 100, self.n_bins + 1)
         bins = np.unique(np.percentile(clean, quantiles))
         bins[0] = -np.inf
@@ -186,10 +188,8 @@ class WOEBinEncoder:
         df = pd.DataFrame({"x": series, "y": y})
         df = df[df["x"].notna()].copy()
 
-        if len(bins) > 2:
-            df["bin"] = pd.cut(df["x"], bins=bins, include_lowest=True)
-        else:
-            df["bin"] = df["x"]
+        # Integer bin IDs preserve exact edges (pd.cut Interval labels round them).
+        df["bin"] = pd.cut(df["x"], bins=bins, labels=False, right=False)
 
         agg = (
             df.groupby("bin", observed=True)
@@ -197,13 +197,10 @@ class WOEBinEncoder:
             .reset_index()
         )
         agg["non_events"] = agg["count"] - agg["events"]
-        if len(bins) > 2:
-            # Map Interval bins to numeric bounds from cut edges
-            agg["bin_lower"] = agg["bin"].apply(lambda iv: iv.left if hasattr(iv, "left") else iv)
-            agg["bin_upper"] = agg["bin"].apply(lambda iv: iv.right if hasattr(iv, "right") else iv)
-        else:
-            agg["bin_lower"] = pd.to_numeric(agg["bin"], errors="coerce")
-            agg["bin_upper"] = pd.to_numeric(agg["bin"], errors="coerce")
+        ids = agg["bin"].astype(int).to_numpy()
+        agg["bin_lower"] = bins[ids]
+        agg["bin_upper"] = bins[ids + 1]
+        agg["bin"] = agg.apply(lambda row: f"[{row.bin_lower}, {row.bin_upper})", axis=1)
         return agg
 
     def _merge_small_bins(

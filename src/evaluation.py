@@ -10,7 +10,7 @@ Metrics implemented:
   - Decile Table: Gains/lift analysis per score band
   - SHAP Summary: Global feature importance with directionality
 
-Regulatory thresholds (standard MRM benchmarks):
+Illustrative project thresholds (not universal regulatory requirements):
   Gini ≥ 0.35 → Acceptable  |  ≥ 0.50 → Good  |  ≥ 0.65 → Excellent
   KS  ≥ 0.20 → Acceptable  |  ≥ 0.35 → Good
   PSI  < 0.10 → Stable      |  0.10–0.25 → Monitor  |  > 0.25 → Unstable
@@ -39,7 +39,7 @@ PSI_THRESHOLDS = {"Stable": 0.10, "Monitor": 0.25}
 def gini_coefficient(y_true: np.ndarray, y_score: np.ndarray) -> float:
     """
     Compute Gini coefficient = 2 * AUC - 1.
-    Range: 0 (random) to 1 (perfect). Industry standard for scorecards.
+    Range: -1 (reversed ranking) to 1 (perfect); 0 is random ranking.
     """
     auc = roc_auc_score(y_true, y_score)
     return 2 * auc - 1
@@ -51,8 +51,8 @@ def ks_statistic(y_true: np.ndarray, y_score: np.ndarray) -> Tuple[float, float]
     Returns (ks_value, threshold_at_ks).
     """
     fpr, tpr, thresholds = roc_curve(y_true, y_score)
-    ks = np.max(tpr - fpr)
-    threshold_at_ks = thresholds[np.argmax(tpr - fpr)]
+    ks = np.max(np.abs(tpr - fpr))
+    threshold_at_ks = thresholds[np.argmax(np.abs(tpr - fpr))]
     return float(ks), float(threshold_at_ks)
 
 
@@ -68,17 +68,8 @@ def psi(
 
     PSI = sum[ (Actual% - Expected%) * ln(Actual% / Expected%) ]
     """
-    # Create bins based on expected distribution
-    breakpoints = np.percentile(expected, np.linspace(0, 100, n_bins + 1))
-    breakpoints = np.unique(breakpoints)
-    breakpoints[0] = -np.inf
-    breakpoints[-1] = np.inf
-
-    expected_pct = np.histogram(expected, bins=breakpoints)[0] / len(expected) + eps
-    actual_pct = np.histogram(actual, bins=breakpoints)[0] / len(actual) + eps
-
-    psi_val = np.sum((actual_pct - expected_pct) * np.log(actual_pct / expected_pct))
-    return float(psi_val)
+    from src.validation import population_stability
+    return population_stability(expected, actual, n_bins=n_bins, eps=eps)
 
 
 def psi_interpretation(psi_val: float) -> str:

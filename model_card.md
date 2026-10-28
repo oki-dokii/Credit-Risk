@@ -1,95 +1,62 @@
-# Model Card — Credit Application Scorecard
+# Model card — Credit Risk validation baseline
 
-**Version**: 1.0  
-**Last Updated**: 2025  
-**Author**: Anil Jhanwar  
-**Model Type**: Credit Risk Scorecard (Champion: Logistic Regression | Challenger: XGBoost)
+Updated: 2026-10-28. Status: synthetic demonstration; not approved for lending.
+The baseline model documentation was authored by Anil Jhanwar; see THIRD_PARTY_NOTICES.md.
 
----
+## Models and target
 
-## 1. Model Intent & Use
+The champion is an L2-regularized logistic regression on training-fitted WOE features.
+The challenger is XGBoost on capped, training-median-imputed features.
+The target convention is 1 = default and 0 = non-default. Higher scorecard points mean lower PD.
+WOE = log(event distribution / non-event distribution); increasing WOE typically increases PD.
+Feature selection uses training Information Value only. No evaluation labels are used in fitting.
 
-**Intended Use**: Score consumer loan/credit card applicants at point-of-application to predict probability of serious delinquency (90+ days past due) within 24 months.
+## Data and evaluation
 
-**Out-of-Scope Uses**:
-- Not designed for small business or commercial lending
-- Not for post-acquisition account management (use collections model instead)
-- Not validated for populations outside the training region/period
+No real training dataset or SAS installation was supplied. The default validation run generates
+12,000 artificial applicants with a fixed seed and a documented logistic outcome mechanism in
+src/validation.py. Its results demonstrate software behavior, not performance on real borrowers.
+The real-data path accepts the Give Me Some Credit feature schema and target SeriousDlqin2yrs;
+synthetic outcomes are artificial and have no real 24-month follow-up period.
 
----
+validation_config.yaml uses 60% training, 20% validation and 20% **simulated OOT proxy**.
+All splits are stratified random samples, not contiguous rows or dated vintages.
+The legacy training configuration uses its own declared fractions in config.yaml.
+The proxy is not a genuine out-of-time test and cannot establish temporal stability.
+Use dated application cohorts with matured outcomes to assess future-vintage performance.
 
-## 2. Training Data
+Run `python validate.py` to regenerate discrimination, calibration, monitoring experiments,
+decision stresses, sign checks and a validation memo. Results are in outputs/validation/metrics.csv
+and outputs/validation/validation_memo.md. Historical CSVs directly under outputs/ are imported
+reference artifacts; they were not reproduced and must not be presented as results of this work.
 
-| Attribute | Detail |
-|---|---|
-| Source | Give Me Some Credit (Kaggle / representative of US consumer bureau data) |
-| Rows | ~150,000 applicants |
-| Target | SeriousDlqin2yrs (1 = defaulted, 0 = performed) |
-| Target Rate | ~6.7% |
-| Train Period | Rows 1–70% (stratified) |
-| Validation | Rows 71–85% (stratified) |
-| OOT | Rows 86–100% (out-of-time holdout) |
+## Decisions and sensitivities
 
----
+Default illustrative score cutoffs: <=580 decline, >580 through 620 review, >620 approve.
+Score conversion uses good:bad odds, PDO 20, base score 600 and base odds 30:1;
+scores are rounded and clipped to 300–850 before applying cutoffs.
+Stress experiments vary income and 90-day delinquency while freezing the model and preprocessing.
+Average predicted PDs are expected default rates, not observed causal stressed outcomes.
+Observed default rates among approved applicants use unchanged labels and describe selection only.
+The cutoffs are demonstration settings, not validated lending policy.
 
-## 3. Features & Information Value
+## Monitoring and limitations
 
-| Feature | IV | Interpretation |
-|---|---|---|
-| RevolvingUtilizationOfUnsecuredLines | 0.42 | Strong |
-| NumberOfTimes90DaysLate | 0.38 | Strong |
-| NumberOfTime30-59DaysPastDueNotWorse | 0.28 | Medium |
-| NumberOfTime60-89DaysPastDueNotWorse | 0.21 | Medium |
-| age | 0.18 | Medium |
-| DebtRatio | 0.09 | Weak |
-| MonthlyIncome | 0.07 | Weak |
+Illustrative alerts: score PSI >0.10, absolute Gini drop >0.05 from the unshifted reference cohort,
+and absolute mean-PD calibration gap >0.03. These are configurable project thresholds,
+not universal regulatory requirements. Performance alerts require matured outcome labels.
+The simulations include artificial label inversion solely to prove the alarm path can fire.
+PSI depends on the frozen reference bins, smoothing and sample size; low PSI does not establish stability.
 
----
+Missing work before production: genuine temporal validation, uncertainty intervals, data provenance,
+segment and fairness assessment, feature-economic review, stress assumptions backed by evidence,
+realized-loss validation, operational controls and independent model approval.
+Income shocks hold DebtRatio fixed and therefore do not model a complete household balance sheet.
 
-## 4. Performance Metrics
+## Python–SAS status
 
-| Metric | Train | Validation | OOT |
-|---|---|---|---|
-| Gini | 0.67 | 0.64 | 0.62 |
-| KS | 0.44 | 0.41 | 0.40 |
-| AUC | 0.84 | 0.82 | 0.81 |
-| PSI (vs Train) | — | 0.04 | 0.06 |
-
-All PSI values < 0.10 → **Stable model, no population shift.**
-
----
-
-## 5. Scorecard Scaling Parameters
-
-- PDO (Points to Double Odds): **20**
-- Base Score: **600** (industry standard)
-- Base Odds: **30:1** (good:bad at score 600)
-- Score Range: **300–850** (capped to FICO range)
-- **Recommended Cutoff**: Score < 580 → Decline | Score 580–620 → Review | Score > 620 → Approve
-
----
-
-## 6. Limitations & Risks
-
-- **Temporal Drift**: Model trained on pre-2020 data; requires PSI monitoring if deployed post-2023
-- **Class Imbalance**: 6.7% bad rate; threshold tuning required for each deployment context
-- **Missing Income**: Monthly income has ~20% missing rate; median imputation may underperform for high-income applicants
-- **Geographic Scope**: Trained on US consumer data; not validated for SEA or India without recalibration
-
----
-
-## 7. Monitoring Recommendations
-
-| Metric | Frequency | Alert Threshold | Action |
-|---|---|---|---|
-| PSI | Monthly | > 0.10 | Investigate; redevelop if > 0.25 |
-| Gini (OOT) | Quarterly | Drop > 0.05 vs baseline | Redevelop |
-| Bad Rate by Decile | Monthly | ±20% from baseline | Recalibrate cutoffs |
-
----
-
-## 8. Ethical Considerations
-
-- Age is used as a predictor — ensure compliance with ECOA/Fair Lending regulations in US deployments
-- Model should be tested for disparate impact across protected classes before production deployment
-- Recommend quarterly fairness audit: approval rates by demographic segment
+Pending actual SAS execution. The exported bridge compares the same frozen WOE design and samples
+under unpenalized logistic maximum likelihood, explicitly distinct from the regularized champion.
+No SAS coefficients, probabilities or Gini have been observed. Python-generated comparator fixtures
+in unit tests are test doubles, not evidence of SAS agreement. Review the SAS convergence log and
+run reconcile.py on actual SAS exports before reporting numerical reconciliation.
