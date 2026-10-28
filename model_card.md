@@ -1,6 +1,6 @@
 # Model card — Credit Risk validation baseline
 
-Updated: 2026-10-28. Status: synthetic demonstration; not approved for lending.
+Updated: 2026-10-28. Status: historical public-data validation; not approved for lending.
 The baseline model documentation was authored by Anil Jhanwar; see THIRD_PARTY_NOTICES.md.
 
 ## Models and target
@@ -13,22 +13,28 @@ Feature selection uses training Information Value only. No evaluation labels are
 
 ## Data and evaluation
 
-No real training dataset or SAS installation was supplied. The default validation run generates
-12,000 artificial applicants with a fixed seed and a documented logistic outcome mechanism in
-src/validation.py. Its results demonstrate software behavior, not performance on real borrowers.
-The real-data path accepts the Give Me Some Credit feature schema and target SeriousDlqin2yrs;
-synthetic outcomes are artificial and have no real 24-month follow-up period.
+The real-data assessment uses 150,000 Give Me Some Credit training rows with 10,026 defaults
+(6.684%), obtained from a documented public mirror because Kaggle required authentication.
+The source file hash, URL and missingness profile are recorded in data/raw/cs-training.provenance.json.
+The mirror was not authenticated against an official Kaggle checksum. No applicant-level data are committed.
+The target is SeriousDlqin2yrs, representing serious delinquency within two years in the public dataset.
+There are no application dates available for constructing a temporal test in this workflow.
+The default no-data command still generates 12,000 artificial applicants for software demonstrations;
+those outputs are kept separate and have no real follow-up period.
 
-validation_config.yaml uses 60% training, 20% validation and 20% **simulated OOT proxy**.
+validation_config.yaml uses 60% training, 20% validation and 20% **random holdout**.
 All splits are stratified random samples, not contiguous rows or dated vintages.
 The legacy training configuration uses its own declared fractions in config.yaml.
-The proxy is not a genuine out-of-time test and cannot establish temporal stability.
+The random holdout is not a genuine out-of-time test and cannot establish temporal stability.
 Use dated application cohorts with matured outcomes to assess future-vintage performance.
 
-Run `python validate.py` to regenerate discrimination, calibration, monitoring experiments,
-decision stresses, sign checks and a validation memo. Results are in outputs/validation/metrics.csv
-and outputs/validation/validation_memo.md. Historical CSVs directly under outputs/ are imported
-reference artifacts; they were not reproduced and must not be presented as results of this work.
+Run `python validate.py --data data/raw/cs-training.csv --output outputs/real_validation`
+to reproduce the real-data metrics, calibration, monitoring, stresses, signs and memo.
+On the 30,000-row random holdout, champion AUC/Gini/KS are 0.8576/0.7153/0.5553,
+with PSI 0.000412 versus training; challenger values are 0.8675/0.7350/0.5803 and PSI 0.000573.
+These are single-split historical estimates without uncertainty intervals or temporal conclusions.
+See outputs/real_validation/validation_memo.md and metrics.csv. The separate synthetic run is
+under outputs/validation/. Historical CSVs directly under outputs/ are imported reference artifacts.
 
 ## Decisions and sensitivities
 
@@ -39,6 +45,11 @@ Stress experiments vary income and 90-day delinquency while freezing the model a
 Average predicted PDs are expected default rates, not observed causal stressed outcomes.
 Observed default rates among approved applicants use unchanged labels and describe selection only.
 The cutoffs are demonstration settings, not validated lending policy.
+Adding one 90-day delinquency to every holdout applicant results in a maximum score of 607
+and minimum PD of 2.54%, below the >620 approval rule (approximately PD <1.61%).
+The zero-approval outcome is a fitted model/policy sensitivity, not a recommended universal rule.
+Training bins separate zero from any positive 90-day count; additional positive counts share a bin.
+See delinquency_bins.csv and delinquency_stress_diagnostics.json in the real-validation outputs.
 
 ## Monitoring and limitations
 

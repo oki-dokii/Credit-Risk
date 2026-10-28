@@ -40,7 +40,7 @@ class WOEBinEncoder:
     - Monotonicity enforcement (required for regulatory scorecards)
     - Custom bin overrides for expert judgement overlays
     - Information Value (IV) computation per feature
-    - Fit on train, transform train/validation/OOT consistently
+    - Fit on train, transform train/validation/random holdout consistently
 
     Parameters
     ----------
@@ -170,11 +170,14 @@ class WOEBinEncoder:
         if clean.nunique() <= self.n_bins:
             values = np.sort(clean.unique()).astype(float)
             return np.r_[-np.inf, values[:-1] + np.diff(values) / 2, np.inf]
-        quantiles = np.linspace(0, 100, self.n_bins + 1)
-        bins = np.unique(np.percentile(clean, quantiles))
-        bins[0] = -np.inf
-        bins[-1] = np.inf
-        return bins
+        # Repeated quantiles at zero must split zero from positive counts.
+        # Replacing [min, max] with [-inf, inf] used to erase sparse predictors.
+        values = np.sort(clean.unique()).astype(float)
+        quantiles = np.percentile(clean, np.linspace(0, 100, self.n_bins + 1)[1:-1])
+        positions = np.unique(np.searchsorted(values, quantiles, side="right"))
+        positions = positions[(positions > 0) & (positions < len(values))]
+        cutpoints = values[positions - 1] + (values[positions] - values[positions - 1]) / 2
+        return np.r_[-np.inf, cutpoints, np.inf]
 
     def _compute_bin_stats(
         self,

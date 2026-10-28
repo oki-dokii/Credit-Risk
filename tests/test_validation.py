@@ -20,9 +20,9 @@ class ValidationTests(unittest.TestCase):
         cls.data = synthetic_data(4000, 42)
         a, b, c, d, e, f = split_data(cls.data, .2, .2, 42)
         cls.prep = FrozenPreprocessor().fit(a)
-        cls.raw_proxy, cls.yproxy = c, f
+        cls.raw_holdout, cls.yholdout = c, f
         cls.splits = {name: (cls.prep.transform(X), y) for name, X, y in
-                      [('train', a, d), ('validation', b, e), ('simulated_oot_proxy', c, f)]}
+                      [('train', a, d), ('validation', b, e), ('random_holdout', c, f)]}
         cls.model = LogisticScorecard(WOEBinEncoder(), lr_params={'max_iter': 3000, 'tol': 1e-8})
         cls.model.fit(*cls.splits['train'])
 
@@ -103,6 +103,17 @@ class ValidationTests(unittest.TestCase):
             expected = scaler.proba_to_score(self.model.predict_proba(X.loc[[index]]))[0]
             self.assertAlmostEqual(total, expected, delta=1.5)
 
+    def test_sparse_counts_do_not_collapse_repeated_zero_quantiles(self):
+        X = pd.DataFrame({'late': np.r_[np.zeros(950), np.arange(1, 51)]})
+        y = pd.Series(np.r_[np.tile([0, 0, 0, 0, 1], 190), np.tile([0, 1], 25)])
+        enc = WOEBinEncoder(n_bins=10, min_bin_pct=.05).fit(X, y)
+        table = enc.get_bin_table('late')
+        self.assertEqual(len(table), 2)
+        self.assertEqual(int(table['count'].sum()), 1000)
+        self.assertGreater(enc.iv_['late'], .02)
+        encoded = enc.transform(pd.DataFrame({'late': [0, 1]})).late
+        self.assertNotEqual(encoded.iloc[0], encoded.iloc[1])
+
     def test_psi_constant_duplicate_and_identity(self):
         self.assertEqual(population_stability(np.ones(20), np.ones(20)), 0)
         self.assertGreater(population_stability(np.ones(20), np.ones(20)*2), .1)
@@ -113,14 +124,14 @@ class ValidationTests(unittest.TestCase):
     def test_monitoring_alert_paths(self):
         thresholds = dict(psi_alert_threshold=.1, gini_alert_threshold=.05, calibration_gap_threshold=.03)
         train_pd = self.model.predict_proba(self.splits['train'][0])
-        result, _ = monitoring_experiments(self.model, self.prep, self.raw_proxy, self.yproxy, train_pd, thresholds)
+        result, _ = monitoring_experiments(self.model, self.prep, self.raw_holdout, self.yholdout, train_pd, thresholds)
         result = result.set_index('scenario')
         self.assertTrue(result.loc['covariate_shift_fixed_labels', 'psi_alert'])
-        self.assertTrue(result.loc['synthetic_outcome_inversion', 'performance_alert'])
+        self.assertTrue(result.loc['artificial_outcome_inversion', 'performance_alert'])
         self.assertFalse(result.loc['unshifted_control', 'performance_alert'])
 
     def test_stress_zero_approvals_is_nan(self):
-        stress = stress_tests(self.model, self.prep, self.raw_proxy, self.yproxy, approval_score=1000)
+        stress = stress_tests(self.model, self.prep, self.raw_holdout, self.yholdout, approval_score=1000)
         self.assertTrue(stress.approved_expected_default_rate.isna().all())
         self.assertTrue(stress.approval_rate.eq(0).all())
 

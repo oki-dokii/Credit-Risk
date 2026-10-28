@@ -18,3 +18,11 @@ outputs/validation/shifted_batch.csv
 outputs/validation/reconciliation/design.csv
 outputs/validation/reconciliation/python_predictions.csv
 outputs/validation/reconciliation/sas_predictions.csv
+outputs/real_validation/*.pkl
+outputs/real_validation/predictions.csv
+outputs/real_validation/shifted_batch.csv
+outputs/real_validation/split_membership.csv
+outputs/real_validation/reconciliation/design.csv
+outputs/real_validation/reconciliation/python_predictions.csv
+outputs/real_validation/reconciliation/sas_predictions.csv
+!outputs/real_validation/calibration.png

@@ -1,0 +1,28 @@
+{
+  "data_source": "SUPPLIED DATA",
+  "rows": 150000,
+  "seed": null,
+  "split_config": {
+    "val_size": 0.2,
+    "holdout_size": 0.2,
+    "random_state": 42
+  },
+  "models": [
+    "logistic_champion",
+    "xgboost_challenger"
+  ],
+  "python": "3.12.14",
+  "numpy": "2.5.4",
+  "pandas": "2.3.3",
+  "scikit_learn": "1.7.2",
+  "input_file_name": "cs-training.csv",
+  "input_file_sha256": "1bd46da486a5708c58c7b01a034fae2a13b327f6f7b62ea7ba4fe3b5824b24ac",
+  "data_sha256": "faab304ad0464655df4c067c53fe99db6acb3f7fc5aa0877a68856c6d86a3ce8",
+  "config_sha256": "3691d233ac33862bac1fc56b5eedbce0d1bbf694b738b14ab58fec5e9c5ecf59",
+  "sas_status": "PENDING_SAS_EXECUTION",
+  "demonstration_alerts": {
+    "psi_shift": true,
+    "gini_inversion": true
+  },
+  "temporal_validation": false
+}

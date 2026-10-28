@@ -1,5 +1,5 @@
 feature,perturbation,expected_pd_direction,mean_pd_change,violation_rate,unchanged_rate,selected
-MonthlyIncome,1000,-1,-0.006843547493551852,0.0,0.4725,True
-NumberOfTimes90DaysLate,1,1,0.07068380745522444,0.0,0.17708333333333334,True
-NumberOfTime30-59DaysPastDueNotWorse,1,1,0.05120461346699448,0.0,0.04875,True
-NumberOfTime60-89DaysPastDueNotWorse,1,1,0.05913856633677772,0.0,0.12166666666666667,True
+MonthlyIncome,1000,-1,-0.006822503941406624,0.0,0.4725,True
+NumberOfTimes90DaysLate,1,1,0.07044257195967672,0.0,0.17708333333333334,True
+NumberOfTime30-59DaysPastDueNotWorse,1,1,0.05087705897179829,0.0,0.04875,True
+NumberOfTime60-89DaysPastDueNotWorse,1,1,0.05935733637321484,0.0,0.12166666666666667,True

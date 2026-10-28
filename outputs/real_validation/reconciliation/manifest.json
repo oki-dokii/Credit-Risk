@@ -1,0 +1,27 @@
+{
+  "status": "PENDING_SAS_EXECUTION",
+  "event": 1,
+  "intercept": true,
+  "penalty": "none",
+  "weights": "none",
+  "selection": "none",
+  "training_split": "train",
+  "feature_order": [
+    "w001",
+    "w002",
+    "w003",
+    "w004",
+    "w005",
+    "w006",
+    "w007",
+    "w008",
+    "w009"
+  ],
+  "design_sha256": "e250382d378e76e726a7022cc7adc748ca68fe79efd2a87190bcee6da12de8c2",
+  "note": "Unpenalized companion; not the regularized champion. No SAS result is implied.",
+  "tolerances": {
+    "coefficient_atol": 0.0001,
+    "probability_atol": 1e-05,
+    "gini_atol": 1e-06
+  }
+}

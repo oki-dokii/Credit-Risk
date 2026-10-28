@@ -14,7 +14,7 @@
     "w005",
     "w006"
   ],
-  "design_sha256": "d4f9a0273d05f48b3aa5485465a905f9141c6b979e6c9f64d79bcd8cd73ff450",
+  "design_sha256": "ccfaf012ca4a4057b9baa3e8225396016620a088fc3f4785271ae7138ba743cc",
   "note": "Unpenalized companion; not the regularized champion. No SAS result is implied.",
   "tolerances": {
     "coefficient_atol": 0.0001,

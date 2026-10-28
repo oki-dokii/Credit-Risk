@@ -64,7 +64,7 @@ def psi(
 ) -> float:
     """
     Compute Population Stability Index between two score distributions.
-    'Expected' = training distribution; 'Actual' = validation/OOT distribution.
+    'Expected' = training distribution; 'Actual' = validation/random holdout distribution.
 
     PSI = sum[ (Actual% - Expected%) * ln(Actual% / Expected%) ]
     """

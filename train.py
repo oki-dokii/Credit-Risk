@@ -61,19 +61,19 @@ def main(args):
     # Split raw observations before learning any imputation statistics.
     df_clean = df
 
-    # ─── 3. Train / Val / OOT Split ────────────────────────────────────────
+    # ─── 3. Train / Val / Random Holdout Split ────────────────────────────────────────
     logger.info("\nSTEP 3: Data Split")
     logger.info("=" * 55)
-    X_train, X_val, X_oot, y_train, y_val, y_oot = split_data(
+    X_train, X_val, X_holdout, y_train, y_val, y_holdout = split_data(
         df_clean,
         val_size=config["split"]["val_size"],
-        oot_size=config["split"]["oot_size"],
+        holdout_size=config["split"]["holdout_size"],
         random_state=config["split"]["random_state"],
     )
     preprocessor = FrozenPreprocessor().fit(X_train)
     X_train = preprocessor.transform(X_train)
     X_val = preprocessor.transform(X_val)
-    X_oot = preprocessor.transform(X_oot)
+    X_holdout = preprocessor.transform(X_holdout)
     save_model(preprocessor, "outputs/models", "preprocessor")
 
     # ─── 4. WOE Encoding & IV Selection ────────────────────────────────────
@@ -110,7 +110,7 @@ def main(args):
     logger.info("=" * 55)
     y_pred_train = champion.predict_proba(X_train)
     y_pred_val   = champion.predict_proba(X_val)
-    y_pred_oot   = champion.predict_proba(X_oot)
+    y_pred_holdout   = champion.predict_proba(X_holdout)
 
     plot_model_report(
         y_train.values, y_pred_train,
@@ -119,13 +119,13 @@ def main(args):
         save_path=f"{args.output}/champion_report.png",
     )
 
-    # OOT evaluation
+    # Random holdout evaluation
     from src.evaluation import gini_coefficient, ks_statistic, psi
-    logger.info("\n  Simulated OOT proxy (random holdout; no temporal validation):")
-    logger.info(f"    Gini (simulated OOT proxy): {gini_coefficient(y_oot.values, y_pred_oot):.4f}")
-    ks_oot, _ = ks_statistic(y_oot.values, y_pred_oot)
-    logger.info(f"    KS   (simulated OOT proxy): {ks_oot:.4f}")
-    logger.info(f"    PSI (train→simulated OOT proxy): {psi(y_pred_train, y_pred_oot):.4f}")
+    logger.info("\n  Random holdout (random holdout; no temporal validation):")
+    logger.info(f"    Gini (random holdout): {gini_coefficient(y_holdout.values, y_pred_holdout):.4f}")
+    ks_oot, _ = ks_statistic(y_holdout.values, y_pred_holdout)
+    logger.info(f"    KS   (random holdout): {ks_oot:.4f}")
+    logger.info(f"    PSI (train→random holdout): {psi(y_pred_train, y_pred_holdout):.4f}")
 
     # Decile table
     dec = decile_table(y_val.values, y_pred_val)
@@ -145,7 +145,7 @@ def main(args):
     for model_name, fitted in [("logistic_champion", champion), ("xgboost_challenger", challenger)]:
         for split_name, features, labels in [
             ("train", X_train, y_train), ("validation", X_val, y_val),
-            ("simulated_oot_proxy", X_oot, y_oot),
+            ("random_holdout", X_holdout, y_holdout),
         ]:
             validation_metrics.append(dict(model=model_name, split=split_name,
                 **metrics(labels, fitted.predict_proba(features))))

@@ -134,32 +134,32 @@ def preprocess(
 def split_data(
     df: pd.DataFrame,
     val_size: float = 0.15,
-    oot_size: float = 0.15,
+    holdout_size: float = 0.15,
     random_state: int = 42,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame,
            pd.Series,  pd.Series,  pd.Series]:
     """
-    Stratified random train / validation / simulated OOT proxy split.
-    No observation dates are available: the proxy cannot test temporal stability.
+    Stratified random train / validation / random holdout split.
+    No observation dates are available: the random holdout cannot test temporal stability.
     """
-    if val_size <= 0 or oot_size <= 0 or val_size + oot_size >= 1:
+    if val_size <= 0 or holdout_size <= 0 or val_size + holdout_size >= 1:
         raise ValueError("Split fractions must be positive and sum to less than one")
     X = df[FEATURE_COLS]
     y = df[TARGET_COL]
 
-    # First split off OOT
-    X_dev, X_oot, y_dev, y_oot = train_test_split(
-        X, y, test_size=oot_size, random_state=random_state, stratify=y
+    # First split off the random holdout
+    X_dev, X_holdout, y_dev, y_holdout = train_test_split(
+        X, y, test_size=holdout_size, random_state=random_state, stratify=y
     )
 
     # Then split dev into train/val
-    adjusted_val = val_size / (1 - oot_size)
+    adjusted_val = val_size / (1 - holdout_size)
     X_train, X_val, y_train, y_val = train_test_split(
         X_dev, y_dev, test_size=adjusted_val, random_state=random_state, stratify=y_dev
     )
 
     logger.info(f"  Train: {len(X_train):,} rows ({y_train.mean():.2%} bad rate)")
     logger.info(f"  Val:   {len(X_val):,} rows  ({y_val.mean():.2%} bad rate)")
-    logger.info(f"  Simulated OOT proxy: {len(X_oot):,} rows ({y_oot.mean():.2%} bad rate)")
+    logger.info(f"  Random holdout: {len(X_holdout):,} rows ({y_holdout.mean():.2%} bad rate)")
 
-    return X_train, X_val, X_oot, y_train, y_val, y_oot
+    return X_train, X_val, X_holdout, y_train, y_val, y_holdout

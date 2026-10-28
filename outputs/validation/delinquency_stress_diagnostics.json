@@ -1,0 +1,11 @@
+{
+  "feature": "NumberOfTimes90DaysLate",
+  "selected": true,
+  "scenario": "Add one 90-day delinquency to EVERY holdout applicant; not a single-applicant shock",
+  "approval_rule": "rounded clipped score > 620",
+  "approximate_pd_boundary": 0.01611635193155847,
+  "stressed_minimum_pd": 0.01742941323540181,
+  "stressed_maximum_score": 618,
+  "stressed_approval_rate": 0.0,
+  "interpretation": "Zero approvals means no stressed score clears the configured policy cutoff. This is a model/policy sensitivity, not a causal claim or a recommended cutoff."
+}

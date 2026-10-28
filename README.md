@@ -4,14 +4,14 @@ An interpretable credit risk scorecard with a challenger model and a reproducibl
 
 The main entry point, `validate.py`, runs without downloading a dataset or installing SAS. It generates artificial applicants, fits both models, evaluates three partitions, exercises monitoring alerts, and writes a validation memo.
 
-**Current evidence:** the committed results use 12,000 synthetic applicants. No real borrower dataset or SAS runtime was available. The random holdout is a **simulated OOT proxy**, not a genuine out-of-time test, and does not demonstrate temporal stability. Actual Python–SAS agreement remains unverified.
+**Current evidence:** the project has now been run on the 150,000-row Give Me Some Credit training dataset, obtained from a public mirror after the official Kaggle endpoint required authentication. Results use a 90,000/30,000/30,000 stratified random split. The third partition is called **random holdout**; no temporal validation has been performed. Actual Python–SAS agreement remains pending SAS execution. The synthetic run remains available as a separate software demonstration.
 
 ## Contents
 
 - [What the project does](#what-the-project-does)
 - [Quick start](#quick-start)
 - [Workflow and methodology](#workflow-and-methodology)
-- [Synthetic demonstration results](#synthetic-demonstration-results)
+- [Real-data validation results](#real-data-validation-results)
 - [Monitoring simulation](#monitoring-simulation)
 - [Decision stress tests](#decision-stress-tests)
 - [Run with your own data](#run-with-your-own-data)
@@ -90,7 +90,7 @@ flowchart TD
     B --> C[Train: fit medians, WOE bins and feature selection]
     C --> D[Fit logistic champion and XGBoost challenger]
     D --> E[Freeze preprocessing and models]
-    E --> F[Evaluate train, validation and simulated OOT proxy]
+    E --> F[Evaluate train, validation and random holdout]
     E --> G[Monitoring and decision stresses]
     E --> H[Export matched Python/SAS bridge]
     F --> I[Tables, calibration chart and validation memo]
@@ -99,11 +99,11 @@ flowchart TD
 
 ### Splitting and leakage controls
 
-The default validation configuration uses 60% training, 20% validation, and 20% simulated OOT proxy. With 12,000 applicants, these contain 7,200, 2,400, and 2,400 observations respectively. Splits are stratified on the default indicator and have no overlapping rows.
+The default validation configuration uses 60% training, 20% validation, and 20% random holdout. The real-data run contains 90,000, 30,000, and 30,000 observations respectively. The optional 12,000-row synthetic run contains 7,200, 2,400, and 2,400. Splits are stratified on the default indicator and have no overlapping rows.
 
 The raw observations are split before learning missing-value medians. Training medians, WOE cut points, WOE values, Information Value selection, and fitted model parameters are then reused without refitting on either held-out partition. Outlier caps are predefined rules in `src/data_utils.py`.
 
-**Why the OOT label is qualified:** a random sample from the same population has no date-based separation. It cannot evaluate future application vintages, changing economic conditions, outcome maturation, or temporal drift. Genuine OOT validation requires dated applications with fully observed outcomes, evaluated after the model-development cutoff.
+**Why this is a random holdout:** a random sample from the same population has no date-based separation. It cannot evaluate future application vintages, changing economic conditions, outcome maturation, or temporal drift. Genuine OOT validation requires dated applications with fully observed outcomes, evaluated after the model-development cutoff.
 
 ### WOE and scorecard conventions
 
@@ -136,24 +136,26 @@ Positive WOE coefficients are generally consistent with the event/non-event conv
 
 Calibration fit status is exported so a failed regression cannot silently be interpreted as a pass. Reported metrics are point estimates; confidence intervals are not implemented.
 
-## Synthetic demonstration results
+## Real-data validation results
 
-These are the committed run's results on artificial data with generation seed 42. They are not claims about performance on the Give Me Some Credit dataset or real borrowers.
+The source file contains **150,000 rows**, **10,026 defaults**, and a **6.684%** overall default rate. The downloaded file's SHA-256 is `1bd46da486a5708c58c7b01a034fae2a13b327f6f7b62ea7ba4fe3b5824b24ac`. The official Kaggle endpoint returned HTTP 401; the file was downloaded from a public mirror, not an authenticated Kaggle download. Its official-file checksum has not been independently authenticated.
 
-| Model | Split | AUC | Gini | KS | Brier | Cal. intercept | Cal. slope |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Logistic champion | train | 0.7570 | 0.5141 | 0.3870 | 0.0644 | 0.0347 | 1.0162 |
-| Logistic champion | validation | 0.7548 | 0.5097 | 0.4014 | 0.0634 | 0.0010 | 1.0055 |
-| Logistic champion | simulated oot proxy | 0.7207 | 0.4414 | 0.3229 | 0.0661 | -0.3813 | 0.8429 |
-| XGBoost challenger | train | 0.8228 | 0.6455 | 0.4876 | 0.0588 | 0.8136 | 1.3986 |
-| XGBoost challenger | validation | 0.7465 | 0.4930 | 0.3849 | 0.0643 | -0.0601 | 0.9737 |
-| XGBoost challenger | simulated oot proxy | 0.7060 | 0.4120 | 0.3437 | 0.0668 | -0.5061 | 0.7878 |
+See [data provenance](data/raw/cs-training.provenance.json) for the exact source URL, hash, schema and missingness counts. The raw borrower-level CSV is not committed.
 
-The logistic champion's training-to-proxy Gini drop is 0.0726, exceeding the illustrative 0.05 review threshold. Its proxy calibration intercept and slope also depart from their ideal values. The challenger has a larger training-to-held-out gap. These observations warrant investigation within the demonstration; no statistical significance or temporal conclusion is established.
+| Model | Split | AUC | Gini | KS | PSI vs train | Brier | Cal. intercept | Cal. slope |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Logistic champion | train | 0.8511 | 0.7022 | 0.5459 | 0.000000 | 0.0506 | 0.0004 | 1.0002 |
+| Logistic champion | validation | 0.8531 | 0.7062 | 0.5469 | 0.000604 | 0.0509 | 0.0038 | 0.9999 |
+| Logistic champion | random holdout | 0.8576 | 0.7153 | 0.5553 | 0.000412 | 0.0505 | 0.0611 | 1.0238 |
+| XGBoost challenger | train | 0.8682 | 0.7364 | 0.5806 | 0.000000 | 0.0483 | 0.1271 | 1.0648 |
+| XGBoost challenger | validation | 0.8639 | 0.7277 | 0.5692 | 0.001214 | 0.0495 | 0.0629 | 1.0264 |
+| XGBoost challenger | random holdout | 0.8675 | 0.7350 | 0.5803 | 0.000573 | 0.0487 | 0.1212 | 1.0587 |
 
-![Calibration curves for the synthetic demonstration](outputs/validation/calibration.png)
+These metrics use one fixed random split and frozen preprocessing. They assess discrimination and calibration on historical held-out applicants. Low PSI across random samples does not establish future-vintage stability. No confidence intervals or statistical significance claims are supplied.
 
-See [all metrics](outputs/validation/metrics.csv), [reliability bands](outputs/validation/calibration_bands.csv), and the [validation memo](outputs/validation/validation_memo.md) for the complete outputs.
+![Calibration curves on Give Me Some Credit](outputs/real_validation/calibration.png)
+
+See [real-data metrics](outputs/real_validation/metrics.csv), [real-data validation memo](outputs/real_validation/validation_memo.md), and the [real-data findings note](docs/real_validation.md). The separate [synthetic metrics](outputs/validation/metrics.csv) remain a reproducible demonstration and must not be mixed with the real-data results.
 
 ## Monitoring simulation
 
@@ -164,9 +166,9 @@ The frozen logistic champion is evaluated on an unshifted proxy cohort and two c
 
 | Scenario | PSI | Gini drop | PSI alert | Performance alert | Calibration alert |
 | --- | --- | --- | --- | --- | --- |
-| unshifted control | 0.0046 | 0.0000 | False | False | False |
-| covariate shift fixed labels | 16.2690 | 0.1441 | True | True | True |
-| synthetic outcome inversion | 0.0046 | 0.8829 | False | True | True |
+| unshifted control | 0.0004 | 0.0000 | False | False | False |
+| covariate shift fixed labels | 21.7116 | 0.1544 | True | True | True |
+| artificial outcome inversion | 0.0004 | 1.4305 | False | True | True |
 
 The inversion scenario is an intentionally extreme software test, not a forecast of borrower behavior. The shifted-feature scenario also does not supply new realized outcomes.
 
@@ -180,7 +182,7 @@ The metrics table separately reports Gini drops against training performance. Th
 
 Thresholds are configurable project settings, not universal regulatory standards. PSI can be calculated without outcomes; Gini and calibration-gap alerts require observed labels. A low PSI does not prove calibration, discrimination, or temporal stability. The synthetic demo raises an error if the expected PSI-shift or Gini-inversion alarm fails to trigger.
 
-Detailed results: [monitoring.csv](outputs/validation/monitoring.csv).
+Detailed results: [monitoring.csv](outputs/real_validation/monitoring.csv).
 
 ## Decision stress tests
 
@@ -196,20 +198,24 @@ The validation stress workflow allows its approval cutoff to be configured. Revi
 
 | Scenario | Approval rate | Portfolio expected default rate | Approved expected default rate |
 | --- | --- | --- | --- |
-| baseline | 7.125% | 7.91% | 1.24% |
-| income x0.5 | 2.250% | 10.01% | 1.35% |
-| income x1.5 | 13.417% | 6.64% | 1.21% |
-| late90 plus1 | 0.000% | 14.98% | N/A |
-| late90 plus3 | 0.000% | 14.98% | N/A |
-| income down late90 up | 0.000% | 18.52% | N/A |
+| baseline | 26.837% | 6.63% | 1.21% |
+| income x0.5 | 21.557% | 7.05% | 1.25% |
+| income x1.5 | 29.337% | 6.36% | 1.18% |
+| late90 plus1 | 0.000% | 16.24% | N/A |
+| late90 plus3 | 0.000% | 16.24% | N/A |
+| income down late90 up | 0.000% | 17.26% | N/A |
 
 “Portfolio expected default rate” is the average model PD across all applicants. The expected default rate among approved applicants is also exported. These are model predictions, not observed stressed default rates.
 
 The reported observed default rate among approved applicants uses unchanged labels; its movement reflects selection into the approved population. When no applicant is approved, approved-portfolio rates are undefined and exported as missing values.
 
+**Why adding one 90-day delinquency produces zero approvals:** the shock applies to every holdout applicant, not one person. The training-fitted delinquency bins separate zero from any positive count; their observed training event rates are 4.61% and 41.74% respectively. After the shock, the minimum model PD is 2.54% and the highest score is 607. Approval requires a score above 620, approximately PD below 1.61% after allowing for rounding. No stressed applicant clears that cutoff. This exposes the interaction between a coarse risk bin and a strict policy threshold; the cutoff has not been validated as lending policy.
+
+See [delinquency bins](outputs/real_validation/delinquency_bins.csv) and [threshold diagnostics](outputs/real_validation/delinquency_stress_diagnostics.json) for the measured values.
+
 Income shocks keep `DebtRatio` fixed, so they do not represent a complete household balance-sheet stress. Identical results for one and three additional delinquencies arise from coarse WOE bins, not proof that additional delinquencies have no economic effect. These experiments do not identify causal effects.
 
-Detailed results: [decision_stress.csv](outputs/validation/decision_stress.csv) and [sign_checks.csv](outputs/validation/sign_checks.csv).
+Detailed results: [decision_stress.csv](outputs/real_validation/decision_stress.csv) and [sign_checks.csv](outputs/real_validation/sign_checks.csv).
 
 ## Run with your own data
 
@@ -257,7 +263,7 @@ python predict.py \
   --output outputs/scores.csv
 ```
 
-`train.py` saves the champion, challenger, WOE encoder, and frozen preprocessor under `outputs/models/`. It uses `config.yaml`, whose default random split is 70/15/15. Its holdout is also a simulated OOT proxy.
+`train.py` saves the champion, challenger, WOE encoder, and frozen preprocessor under `outputs/models/`. It uses `config.yaml`, whose default random split is 70/15/15. Its third partition is also a random holdout.
 
 `predict.py` expects the champion and preprocessor artifacts from `train.py` in that directory. Its input needs the ten feature columns; an outcome label is not required. Output adds `predicted_default_prob`, `scorecard_points`, and `decision` to the applicant rows.
 
@@ -269,13 +275,13 @@ The default inference cutoffs in `predict.py` are fixed at 580 and 620. Changing
 
 **Status: pending actual SAS execution.** No SAS coefficients, probabilities, or Gini results have been observed.
 
-Running `validate.py` prepares `outputs/validation/reconciliation/` with the exact sample membership, frozen WOE design matrix, Python coefficients and predictions, feature mapping, numerical tolerances, and an executable SAS program.
+Running `validate.py --data data/raw/cs-training.csv --output outputs/real_validation` prepares `outputs/real_validation/reconciliation/` with the exact sample membership, frozen WOE design matrix, Python coefficients and predictions, feature mapping, numerical tolerances, and an executable SAS program.
 
 The bridge fits a separate **unpenalized logistic companion model** to match SAS's default maximum-likelihood specification. It is distinct from the L2-regularized champion. Both bridge specifications include an intercept, model `target=1`, and use no weights, class adjustments, feature selection, or standardization inside the logistic fit. Preprocessing, bins, and the selected feature set are supplied identically to both platforms.
 
 To complete reconciliation:
 
-1. Run `python validate.py` to regenerate local bridge files that are excluded from Git.
+1. Run the real-data validation command above to regenerate the matching real-data bridge files that are excluded from Git. The synthetic and real-data bridge designs must not be mixed.
 2. Copy the reconciliation directory to a SAS environment and set `bridge_dir` in `reconcile.sas`.
 3. Execute the program and review the SAS log for convergence, separation, dropped rows, and event coding.
 4. Retrieve `sas_predictions.csv` and `sas_coefficients.csv` without rounding or editing their values.
@@ -283,7 +289,7 @@ To complete reconciliation:
 
 ```bash
 python reconcile.py \
-  --directory outputs/validation/reconciliation \
+  --directory outputs/real_validation/reconciliation \
   --sas-predictions /absolute/path/sas_predictions.csv \
   --sas-coefficients /absolute/path/sas_coefficients.csv
 ```
@@ -314,7 +320,7 @@ Validation defaults include ten initial WOE bins, minimum bin population 5%, mon
 
 ## Outputs and reproducibility
 
-Default validation outputs are written under `outputs/validation/`:
+The committed real-data summaries are under `outputs/real_validation/`; the default synthetic run writes the same artifact types under `outputs/validation/`:
 
 | Artifact | Purpose |
 | --- | --- |
@@ -329,10 +335,11 @@ Default validation outputs are written under `outputs/validation/`:
 | `split_membership.csv` | Input-row split assignments |
 | `run_manifest.json` | Data/config hashes, seeds, package versions, model list, and run status |
 | `reconciliation/` | Python companion summaries, feature mapping, SAS code, and comparison manifest |
+| `delinquency_bins.csv`, `delinquency_stress_diagnostics.json` | Exact delinquency risk bands and stress/cutoff explanation |
 
-The command also generates raw synthetic applicants, row-level predictions, the shifted batch, a fitted validation bundle, and the full reconciliation design and predictions. Those larger artifacts are excluded from Git at the default output paths and must be regenerated locally. Custom output directories do not inherit all of those path-specific ignore rules.
+The command also generates raw synthetic applicants, row-level predictions, the shifted batch, a fitted validation bundle, and the full reconciliation design and predictions. Those larger artifacts are excluded from Git under both standard output directories and must be regenerated locally. Real-data split membership is also kept local. Other custom output directories do not inherit all of those path-specific ignore rules.
 
-Historical CSV files directly under `outputs/` are imported reference artifacts and have not been reproduced as real-data results. The new synthetic demonstration is contained in `outputs/validation/`.
+Historical CSV files directly under `outputs/` are imported reference artifacts and have not been reproduced as real-data results. The synthetic demonstration is contained in `outputs/validation/`; the real-data assessment is in `outputs/real_validation/`.
 
 ## Project structure
 
@@ -362,7 +369,8 @@ Credit-Risk/
 │   └── test_results.md              # Recorded verification evidence
 ├── notebooks/                      # EDA and WOE exploration
 ├── data/raw/                       # Optional training data, supplied separately
-└── outputs/validation/              # New synthetic demonstration artifacts
+├── outputs/validation/              # Synthetic demonstration artifacts
+└── outputs/real_validation/         # Real-data random-split assessment
 ```
 
 ## Verification
@@ -371,24 +379,24 @@ Credit-Risk/
 python -m unittest discover -s tests -v
 ```
 
-The recorded run passed 11 tests covering known metric values and reversed ranking, calibration fitting, input validation, non-overlapping splits, frozen imputation, exact WOE boundaries, bin count conservation, scorecard point arithmetic, constant-score PSI, monitoring alarms, zero-approval cases, and strict reconciliation checks.
+The recorded run passed 12 tests covering known metric values and reversed ranking, calibration fitting, input validation, non-overlapping splits, frozen imputation, exact WOE boundaries, bin count conservation, scorecard point arithmetic, constant-score PSI, monitoring alarms, zero-approval cases, and strict reconciliation checks.
 
 Additional checks exercised CSV ingestion, scored 50 applicants through `predict.py` with saved preprocessing, compiled the sources, and visually inspected the calibration chart. See [verification results](docs/test_results.md).
 
-Baseline issues corrected during this work include whole-sample median leakage, inconsistent WOE fitting/scoring boundaries, discrete minimum-value exclusion, constant-score PSI handling, and the intercept sign in the scorecard points table. Existing models should be retrained after these changes.
+Baseline issues corrected during this work include whole-sample median leakage, inconsistent WOE fitting/scoring boundaries, discrete minimum-value exclusion, constant-score PSI handling, sparse-count quantile collapse, and the intercept sign in the scorecard points table. Existing models should be retrained after these changes.
 
 ## Limitations and next steps
 
-This repository currently demonstrates an executable validation approach. It does not establish production readiness or real-world lending performance.
+This repository now includes historical public-data validation. It does not establish production readiness, future-vintage performance or suitability for a new lending population.
 
-- Replace artificial data with documented, representative borrower data and matured outcomes.
+- Assess representativeness, provenance and outcome maturity for the intended lending population; the public historical dataset alone does not establish these.
 - Add a genuinely dated OOT cohort; retain random holdouts for their separate purposes.
 - Quantify uncertainty and assess performance/calibration across relevant segments and vintages.
 - Complete actual SAS execution, retain its fitting log, and investigate numerical discrepancies.
 - Review economic signs, coarse binning, feature relationships, and decision cutoffs with credit-policy owners.
 - Extend the analysis to fairness, realized losses, stress assumptions, operational data quality, and approved monitoring actions.
 
-The generated memo records a demonstration-only disposition and the outstanding work.
+The real-data memo records a historical random-split assessment, with production approval and SAS reconciliation still pending.
 
 ## Troubleshooting
 

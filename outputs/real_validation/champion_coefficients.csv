@@ -1,0 +1,10 @@
+feature,coefficient,woe_convention,negative_coefficient_review
+RevolvingUtilizationOfUnsecuredLines,0.6548399388105609,log(event_distribution / non_event_distribution),False
+NumberOfTimes90DaysLate,0.5298356310937787,log(event_distribution / non_event_distribution),False
+NumberOfTime30-59DaysPastDueNotWorse,0.509485184494894,log(event_distribution / non_event_distribution),False
+NumberOfTime60-89DaysPastDueNotWorse,0.4073196358331816,log(event_distribution / non_event_distribution),False
+age,0.4045987251576402,log(event_distribution / non_event_distribution),False
+MonthlyIncome,0.37004847861631357,log(event_distribution / non_event_distribution),False
+NumberOfOpenCreditLinesAndLoans,-0.27696410621600537,log(event_distribution / non_event_distribution),True
+NumberRealEstateLoansOrLines,0.05195006353140461,log(event_distribution / non_event_distribution),False
+NumberOfDependents,0.28353555741497577,log(event_distribution / non_event_distribution),False

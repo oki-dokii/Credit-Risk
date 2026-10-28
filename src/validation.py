@@ -106,7 +106,7 @@ def monitoring_experiments(model, prep, X, y, train_pd, thresholds):
     shifted['NumberOfTimes90DaysLate'] = shifted.NumberOfTimes90DaysLate + 4
     batches = [('unshifted_control', X, y),
                ('covariate_shift_fixed_labels', shifted, y),
-               ('synthetic_outcome_inversion', X, 1-np.asarray(y))]
+               ('artificial_outcome_inversion', X, 1-np.asarray(y))]
     rows = []
     for scenario, frame, labels in batches:
         p = model.predict_proba(prep.transform(frame))
@@ -138,12 +138,15 @@ def stress_tests(model, prep, X, y, approval_score=620):
             frame['NumberOfTimes90DaysLate'] = frame.NumberOfTimes90DaysLate + delta
         transformed = prep.transform(frame)
         p = model.predict_proba(transformed)
-        approved = model.predict_score(transformed) > approval_score
+        scores = model.predict_score(transformed)
+        approved = scores > approval_score
         rows.append(dict(scenario=name, n=len(p), approved_count=int(approved.sum()),
             approval_rate=float(approved.mean()), portfolio_expected_default_rate=float(p.mean()),
             approved_expected_default_rate=float(p[approved].mean()) if approved.any() else np.nan,
             approved_observed_rate_fixed_labels=float(np.asarray(y)[approved].mean()) if approved.any() else np.nan,
-            mean_pd_change=float((p-baseline_p).mean()), approval_score=approval_score))
+            mean_pd_change=float((p-baseline_p).mean()), approval_score=approval_score,
+            minimum_pd=float(p.min()), maximum_score=int(scores.max()),
+            minimum_score=int(scores.min())))
     return pd.DataFrame(rows)
 
 

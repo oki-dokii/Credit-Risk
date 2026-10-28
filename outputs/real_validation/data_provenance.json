@@ -1,0 +1,41 @@
+{
+  "dataset": "Give Me Some Credit / cs-training.csv",
+  "canonical_source": "https://www.kaggle.com/competitions/GiveMeSomeCredit/data",
+  "download_source": "https://github.com/JLZml/Credit-Scoring-Data-Sets/raw/refs/heads/master/3.%20Kaggle/Give%20Me%20Some%20Credit/cs-training.csv",
+  "download_note": "Official Kaggle endpoint returned HTTP 401; obtained a public mirror. Not authenticated against an official Kaggle file checksum.",
+  "download_date": "2026-10-28",
+  "sha256": "1bd46da486a5708c58c7b01a034fae2a13b327f6f7b62ea7ba4fe3b5824b24ac",
+  "bytes": 7564965,
+  "rows": 150000,
+  "defaults": 10026,
+  "default_rate": 0.06684,
+  "columns": [
+    "Unnamed: 0",
+    "SeriousDlqin2yrs",
+    "RevolvingUtilizationOfUnsecuredLines",
+    "age",
+    "NumberOfTime30-59DaysPastDueNotWorse",
+    "DebtRatio",
+    "MonthlyIncome",
+    "NumberOfOpenCreditLinesAndLoans",
+    "NumberOfTimes90DaysLate",
+    "NumberRealEstateLoansOrLines",
+    "NumberOfTime60-89DaysPastDueNotWorse",
+    "NumberOfDependents"
+  ],
+  "row_index_unique": true,
+  "missing_by_column": {
+    "Unnamed: 0": 0,
+    "SeriousDlqin2yrs": 0,
+    "RevolvingUtilizationOfUnsecuredLines": 0,
+    "age": 0,
+    "NumberOfTime30-59DaysPastDueNotWorse": 0,
+    "DebtRatio": 0,
+    "MonthlyIncome": 29731,
+    "NumberOfOpenCreditLinesAndLoans": 0,
+    "NumberOfTimes90DaysLate": 0,
+    "NumberRealEstateLoansOrLines": 0,
+    "NumberOfTime60-89DaysPastDueNotWorse": 0,
+    "NumberOfDependents": 3924
+  }
+}

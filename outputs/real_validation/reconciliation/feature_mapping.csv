@@ -1,0 +1,10 @@
+feature,sas_term
+RevolvingUtilizationOfUnsecuredLines,w001
+NumberOfTimes90DaysLate,w002
+NumberOfTime30-59DaysPastDueNotWorse,w003
+NumberOfTime60-89DaysPastDueNotWorse,w004
+age,w005
+MonthlyIncome,w006
+NumberOfOpenCreditLinesAndLoans,w007
+NumberRealEstateLoansOrLines,w008
+NumberOfDependents,w009
